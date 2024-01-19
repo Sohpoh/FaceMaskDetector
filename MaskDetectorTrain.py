@@ -20,12 +20,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from imutils import paths
 
-INIT_LR = 1e-4
-EPOCHS = 20
-BS = 32
+epochs = 30
+batchSize = 32
+learningRate = 1e-4
 
 dir = r"C:\Users\sohum\OneDrive\Documents\FaceMaskDetector\FaceMaskDetector\dataset"
-CATEGORIES = ["Mask", "NoMask"]
 data = []
 labels = []
 
@@ -82,44 +81,27 @@ model = Model(inputs=baseModel.input, outputs=headModel)
 for layer in baseModel.layers:
 	layer.trainable = False
 
-print("[INFO] compiling model...")
-decay=INIT_LR / EPOCHS
+decay=learningRate / epochs
 lr_schedule = ExponentialDecay(
-    initial_learning_rate=INIT_LR,
+    initial_learning_rate=learningRate,
     decay_steps=10000,
     decay_rate=decay)
 opt = Adam(learning_rate=lr_schedule)
 model.compile(loss="binary_crossentropy", optimizer=opt,
 	metrics=["accuracy"])
 
-print("[INFO] training head...")
 H = model.fit(
-	aug.flow(trainX, trainY, batch_size=BS),
-	steps_per_epoch=len(trainX) // BS,
+	aug.flow(trainX, trainY, batch_size=batchSize),
+	steps_per_epoch=len(trainX) // batchSize,
 	validation_data=(testX, testY),
-	validation_steps=len(testX) // BS,
-	epochs=EPOCHS)
+	validation_steps=len(testX) // batchSize,
+	epochs=epochs)
 
-print("[INFO] evaluating network...")
-predIdxs = model.predict(testX, batch_size=BS)
+predIdxs = model.predict(testX, batch_size=batchSize)
 
 predIdxs = np.argmax(predIdxs, axis=1)
 
 print(classification_report(testY.argmax(axis=1), predIdxs,
 	target_names=lb.classes_))
 
-print("[INFO] saving mask detector model...")
-model.save("mask_detector.model", save_format="h5")
-
-N = EPOCHS
-plt.style.use("ggplot")
-plt.figure()
-plt.plot(np.arange(0, N), H.history["loss"], label="train_loss")
-plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
-plt.plot(np.arange(0, N), H.history["accuracy"], label="train_acc")
-plt.plot(np.arange(0, N), H.history["val_accuracy"], label="val_acc")
-plt.title("Training Loss and Accuracy")
-plt.xlabel("Epoch #")
-plt.ylabel("Loss/Accuracy")
-plt.legend(loc="lower left")
-plt.savefig("plot.png")
+model.save("maskDetector.model", save_format="h5")
